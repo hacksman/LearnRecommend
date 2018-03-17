@@ -118,6 +118,65 @@ def xzz_get_recommendations(perfs, person, similarity=xzz_sim_person):
     return ranks
 
 
+def xzz_transform_prefs(prefs):
+    '''
+    转置字典操作,可以理解为矩阵转置操作
+    '''
+    result = {}
+    for per_person in prefs:
+        for per_item in prefs[per_person]:
+            result.setdefault(per_item, {})
+            result[per_item][per_person] = prefs[per_person][per_item]
+
+    return result
+
+
+def xzz_calcilate_similar_items(prefs, n=10):
+    """
+    item-based collaborative filtering
+     基于物品的协作性过滤
+     :return : 给出与这些物品最相近的n个其他物品
+    """
+    result = {}
+    item_prefs = transform_prefs(prefs)
+
+    c = 0
+    for per_item in item_prefs:
+        c += 1
+        if c % 100 == 0:
+            print "%d / %d" % (c, len(item_prefs))
+        scores = top_matches(item_prefs, per_item, n=n, similarity=sim_distance)
+        result[per_item] = scores
+    return result
+
+
+def xzz_get_recommend_item(prefs, item_match, user):
+    """
+     根据物品相似度评分,作为权重进行加权计算,来得到未看过影片的评分
+    """
+    user_ratings = prefs[user]
+    scores = {}
+    total_sim = {}
+
+    for (item1, rating) in user_ratings.items():
+
+        for (similarity, item2) in item_match[item1]:
+
+            # 跳过对已经评分的作品
+            if item2 in user_ratings:
+                continue
+
+            scores.setdefault(item2, 0)
+            scores[item2] += similarity*rating
+
+            total_sim.setdefault(item2, 0)
+            total_sim[item2] += similarity
+
+    result = [(scores[item]/total_sim[item], item) for item in scores]
+    result.sort()
+    result.reverse()
+    return result
+
 
 if __name__ == '__main__':
     # for per_p in Videos_data:
